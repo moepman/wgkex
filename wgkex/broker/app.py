@@ -1,8 +1,10 @@
-#!/usr/bin/env python3
 import re
+import atexit
+import logging
 
 from flask import Flask, abort, jsonify, render_template, request
 from voluptuous import Invalid, MultipleInvalid, Required, Schema
+import zmq
 
 from wgkex.config import load_config
 
@@ -28,21 +30,15 @@ WG_KEY_EXCHANGE_SCHEMA_V1 = Schema(
     {Required("public_key"): is_valid_wg_pubkey, Required("domain"): is_valid_domain}
 )
 
+context = zmq.Context()
+socket = context.socket(zmq.REQ)
+socket.connect("tcp://localhost:5555")
+
 
 @app.route("/", methods=["GET"])
 def index():
     # return templates/index.html
     return render_template("index.html")
-
-
-# Keep to be compatible
-@app.route("/wg-public-key/<path:key>", methods=["GET"])
-def receive_public_key(key):
-    if not is_valid_wg_pubkey(key):
-        return jsonify({"Message": "Invalid Key"}), 400
-    with open("/var/lib/wgkex/public.keys", "a") as pubkeys:
-        pubkeys.write("%s\n" % key)
-    return jsonify({"Message": "OK"}), 200
 
 
 @app.route("/api/v1/wg/key/exchange", methods=["POST"])
@@ -54,9 +50,10 @@ def wg_key_exchange():
 
     key = data["public_key"]
     domain = data["domain"]
-    print(key, domain)
+    logging.debug(f"Received WG Key for domain {domain}: {key}")
 
-    with open(config["pubkeys_file"], "a") as pubkeys:
-        pubkeys.write("%s %s\n" % (key, domain))
+    socket.send_string(f"{key}, {domain}")
+    message = socket.recv_string()
+    print(f"Got {message}")
 
     return jsonify({"Message": "OK"}), 200
