@@ -11,7 +11,8 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt update -qq -y
-        sudo apt install -qq -y build-essential fakeroot git python-all python3-cryptography python3-stdeb python3-wheel twine
+        sudo apt install -qq -y build-essential fakeroot git python-all python3-flask python3-pip python3-stdeb python3-voluptuous python3-wheel twine
+        sudo pip3 install --upgrade setuptools wheel
     - name: Prepare build process
       id: buildprep
       run: |
@@ -28,8 +29,8 @@ jobs:
       id: stdebprep
       run: |
         # Patch setup.py to allow stdeb proper debian style builds
-        sed "s/=determine_version()/='$(python3 setup.py --version)'/gi" -i setup.py
-        sed "s@('readme'@('share/doc/python3-acertmgr'@" -i setup.py
+        #sed "s/=determine_version()/='$(python3 setup.py --version)'/gi" -i setup.py
+        #sed "s@('readme'@('share/doc/python3-acertmgr'@" -i setup.py
         # Determine recommended dependencies for deb package
         echo "::set-output name=recommends3::$(echo "python3-pkg-resources")"
         # Find optional dependencies to suggest in deb package
